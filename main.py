@@ -11,24 +11,26 @@ app = FastAPI()
 
 def preprocess_for_ocr(image: Image.Image) -> Image.Image:
     """
-    Tiền xử lý ảnh để cải thiện nhận diện OCR
+    Tiền xử lý ảnh để cải thiện nhận diện OCR, đặc biệt với text màu đỏ trên nền trắng
     """
     img_cv = np.array(image)
     
-    # Chuyển sang thang độ xám
-    gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
+    # Chuyển sang thang độ xám và tập trung vào kênh đỏ để làm nổi bật text màu đỏ
+    channels = cv2.split(img_cv)
+    red_channel = channels[2]  # Kênh đỏ
+    gray = cv2.subtract(255, red_channel)  # Đảo ngược để text đỏ thành sáng trên nền tối
     
-    # Làm nổi bật text bằng adaptive threshold
+    # Áp dụng adaptive threshold để làm nổi bật text
     thresh = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-        cv2.THRESH_BINARY_INV, 11, 2
+        cv2.THRESH_BINARY, 15, 5
     )
     
-    # Loại bỏ nhiễu bằng Gaussian Blur
-    thresh = cv2.GaussianBlur(thresh, (3, 3), 0)
+    # Loại bỏ nhiễu
+    thresh = cv2.medianBlur(thresh, 3)
     
-    # Resize ảnh lên 3 lần để cải thiện OCR
-    thresh = cv2.resize(thresh, (thresh.shape[1] * 3, thresh.shape[0] * 3), interpolation=cv2.INTER_LINEAR)
+    # Resize ảnh lên 4 lần để tăng độ chi tiết cho OCR
+    thresh = cv2.resize(thresh, (thresh.shape[1] * 4, thresh.shape[0] * 4), interpolation=cv2.INTER_CUBIC)
     
     return Image.fromarray(thresh)
 
@@ -41,8 +43,12 @@ async def extract_all_text(file: UploadFile = File(...)):
         # Tiền xử lý ảnh trước khi OCR
         processed_image = preprocess_for_ocr(image)
 
-        # OCR toàn ảnh bằng tiếng Việt
-        full_text = pytesseract.image_to_string(processed_image, lang="vie", config="--psm 6 --oem 1")
+        # OCR toàn ảnh với cấu hình tối ưu
+        full_text = pytesseract.image_to_string(
+            processed_image, 
+            lang="vie+eng", 
+            config="--psm 6 --oem 1 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        )
         return full_text.strip() if full_text.strip() else "Không phát hiện văn bản nào"
     except Exception as e:
         return PlainTextResponse(f"Lỗi: {str(e)}", status_code=500)
@@ -56,21 +62,20 @@ async def extract_captcha(file: UploadFile = File(...)):
         # Tiền xử lý ảnh trước khi OCR
         processed_image = preprocess_for_ocr(image)
 
-        # OCR toàn ảnh bằng tiếng Việt
+        # OCR toàn ảnh với cấu hình tối ưu
         full_text = pytesseract.image_to_string(
             processed_image, 
-            lang="vie+eng",  # Kết hợp tiếng Việt và tiếng Anh để nhận diện cả "Nhập captcha" và "r3"
-            config="--psm 6 --oem 1"
+            lang="vie+eng", 
+            config="--psm 6 --oem 1 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         )
 
         # Tìm đoạn text chứa "Nhập captcha" và lấy đoạn text phía sau
         lines = full_text.splitlines()
         captcha_text = None
         for i, line in enumerate(lines):
-            if "Nhập captcha" in line:
-                # Lấy dòng tiếp theo sau "Nhập captcha"
+            if "Nhập captcha" in line.lower():  # Không phân biệt hoa thường
+                # Tìm dòng tiếp theo có chứa ký tự alphanumeric
                 for j in range(i + 1, len(lines)):
-                    # Tìm dòng tiếp theo có chứa ký tự alphanumeric
                     potential_captcha = lines[j].strip()
                     if re.search(r'[a-zA-Z0-9]', potential_captcha):
                         captcha_text = re.sub(r'[^a-zA-Z0-9]', '', potential_captcha)
