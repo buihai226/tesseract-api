@@ -11,11 +11,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+logger.info("FastAPI app initialized")
+logger.info(f"Registered routes: {[route.path for route in app.routes]}")
 
 @app.route("/", methods=["GET", "HEAD"])
 async def health_check(request: Request):
     logger.info(f"Health check endpoint accessed with method: {request.method}")
     return PlainTextResponse("Application is running")
+
+@app.get("/test", response_class=PlainTextResponse)
+async def test_endpoint():
+    logger.info("Test endpoint accessed")
+    return "Test endpoint is working"
 
 @app.get("/extract-captcha", response_class=PlainTextResponse)
 async def extract_captcha_get():
@@ -50,3 +57,6 @@ if __name__ == "__main__":
     logger.info(f"Environment variable PORT: {os.environ.get('PORT')}")
     logger.info(f"Starting server on port {port}")
     uvicorn.run("main:app", host="0.0.0.0", port=port)
+    logger.info("Server started")
+    logger.info("Server is running")
+
