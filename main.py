@@ -16,7 +16,7 @@ def preprocess_for_ocr(image: Image.Image) -> Image.Image:
     img_cv = np.array(image)
     gray = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
     # Giảm ngưỡng để tăng khả năng nhận diện text
-    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+    _, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY)
 
     # Resize lên 2 lần để cải thiện OCR
     thresh = cv2.resize(thresh, (thresh.shape[1] * 2, thresh.shape[0] * 2), interpolation=cv2.INTER_LINEAR)
