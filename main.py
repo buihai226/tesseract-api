@@ -37,15 +37,15 @@ async def extract_captcha(file: UploadFile = File(...)):
         image = Image.open(io.BytesIO(image_data)).convert("RGB")
 
         logger.info("Running OCR on image with Tesseract")
-        # Sử dụng Tesseract để trích xuất văn bản
+        # Trích xuất toàn bộ text từ ảnh
         text = pytesseract.image_to_string(image, lang='eng', config='--psm 6')
 
         if text.strip():
-            logger.info(f"Captcha found: {text.strip()}")
+            logger.info("Full extracted text:\n" + text.strip())
             return text.strip()
         else:
-            logger.info("No captcha found")
-            return "Can't found"
+            logger.info("No text found in image")
+            return "No text found in image"
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}")
         return f"Error: {str(e)}"
@@ -59,4 +59,3 @@ if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=port)
     logger.info("Server started")
     logger.info("Server is running")
-
