@@ -38,7 +38,7 @@ async def extract_captcha(file: UploadFile = File(...)):
         npimg = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
-        captcha_region = img[590:650, 460:590]
+        captcha_region = img[1080:1150, 635:775]
 
         gray = cv2.cvtColor(captcha_region, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(gray, 160, 255, cv2.THRESH_BINARY)
