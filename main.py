@@ -31,22 +31,24 @@ app = FastAPI()
 
 def extract_captcha_region(image: Image.Image) -> str:
     """
-    Crop vùng CAPTCHA (dựa trên kích thước 1080x1920) và OCR riêng
+    Cắt vùng CAPTCHA dựa trên tỉ lệ ảnh (không phụ thuộc độ phân giải)
     """
     width, height = image.size
-    if width == 1080 and height == 1920:
-        # Crop vùng CAPTCHA
-        captcha_box = (655, 1090, 755, 1130)  # (left, top, right, bottom)
-        captcha_img = image.crop(captcha_box)
 
-        # OCR captcha
-        return pytesseract.image_to_string(
-            captcha_img,
-            lang="eng",
-            config='--psm 8 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-        ).strip()
-    else:
-        return "Unsupported image size for CAPTCHA crop"
+    # Vùng CAPTCHA theo tỉ lệ ( nhờ AI tính )
+    x1 = int(width * 0.605)   # 60.5% từ trái
+    y1 = int(height * 0.567)  # 56.7% từ trên
+    x2 = int(width * 0.70)    # 70.0% từ trái
+    y2 = int(height * 0.588)  # 58.8% từ trên
+
+    captcha_img = image.crop((x1, y1, x2, y2))
+
+    # OCR CAPTCHA
+    return pytesseract.image_to_string(
+        captcha_img,
+        lang="eng",
+        config='--psm 8 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    ).strip()
 
 @app.post("/extract-captcha")
 async def extract_captcha(file: UploadFile = File(...)):
@@ -54,15 +56,18 @@ async def extract_captcha(file: UploadFile = File(...)):
         image_bytes = await file.read()
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
+        # OCR toàn ảnh
         full_text = pytesseract.image_to_string(image, lang="eng", config="--psm 6").strip()
+
+        # OCR vùng CAPTCHA theo tỉ lệ
         captcha_text = extract_captcha_region(image)
 
         return JSONResponse(content={
+            "image_size": image.size,
             "full_text": full_text,
             "captcha_text": captcha_text
         })
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
-
 
 
