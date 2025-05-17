@@ -1,7 +1,6 @@
 fastapi
 uvicorn
-easyocr
-pydantic
+pytesseract
 pillow
 numpy
 opencv-python
