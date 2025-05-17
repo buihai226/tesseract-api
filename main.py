@@ -35,8 +35,8 @@ def extract_captcha_region(image: Image.Image) -> str:
     """
     width, height = image.size
     if width == 1080 and height == 1920:
-        # Crop vùng chứa r3 
-        captcha_box = (625, 1075, 775, 1145)  # (left, top, right, bottom)
+        # Crop vùng CAPTCHA
+        captcha_box = (630, 1060, 780, 1130)  # (left, top, right, bottom)
         captcha_img = image.crop(captcha_box)
 
         # OCR captcha
