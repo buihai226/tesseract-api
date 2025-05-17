@@ -2,7 +2,6 @@ from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import PlainTextResponse
 import pytesseract
 from PIL import Image
-import numpy as np
 import io
 import logging
 import os
